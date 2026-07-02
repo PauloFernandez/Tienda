@@ -43,41 +43,7 @@
         </form>
     </section>
 
-    <!-- Catálogo de productos -->
-    <section class="catalog">
-        <h2>Catálogo de Productos</h2>
-        <div class="products">
-            <!-- Producto 1 -->
-            <div class="product-card">
-                <img src="product1.jpg" alt="Producto 1">
-                <h3>Producto 1</h3>
-                <p>Descripción breve del producto.</p>
-                <p class="price">$100.00</p>
-            </div>
-            <!-- Producto 2 -->
-            <div class="product-card">
-                <img src="product2.jpg" alt="Producto 2">
-                <h3>Producto 2</h3>
-                <p>Descripción breve del producto.</p>
-                <p class="price">$200.00</p>
-            </div>
-            <!-- Producto 3 -->
-            <div class="product-card">
-                <img src="product3.jpg" alt="Producto 3">
-                <h3>Producto 3</h3>
-                <p>Descripción breve del producto.</p>
-                <p class="price">$150.00</p>
-            </div>
-            <!-- Más productos aquí -->
-        </div>
-        <!-- Paginación -->
-        <div class="pagination">
-            <a href="#" class="page">1</a>
-            <a href="#" class="page">2</a>
-            <a href="#" class="page">3</a>
-            <a href="#" class="page">Siguiente </a>
-        </div>
-    </section>
+    @yield('contenido')
 
     <!-- Footer -->
     <footer class="footer">

@@ -12,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Set;
+use Illuminate\Support\Str;
 
 class ProductResource extends Resource
 {
@@ -30,7 +32,9 @@ class ProductResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->label('Nombre')
                     ->required()
-                    ->maxLength(100),
+                    ->maxLength(100)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state))),
                 Forms\Components\TextInput::make('slug')
                     ->required()
                     ->maxLength(255),
@@ -43,14 +47,15 @@ class ProductResource extends Resource
                     ->columnSpanFull(),
                 Forms\Components\FileUpload::make('image')
                     ->label('Imagen')
-                    ->image(),
+                    ->image()
+                    ->directory('products'),
                 Forms\Components\TextInput::make('price')
                     ->label('Precio')
                     ->required()
                     ->numeric()
                     ->prefix('$'),
                 Forms\Components\TextInput::make('cost_price')
-                    ->label('Prescio Compra')
+                    ->label('Precio Compra')
                     ->numeric()
                     ->default(null),
                 Forms\Components\TextInput::make('stock')
