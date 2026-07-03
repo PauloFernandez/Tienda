@@ -27,8 +27,17 @@ class DashboardPanelProvider extends PanelProvider
             ->id('dashboard')
             ->path('admin')
             ->login()
+            ->brandLogo(asset('assets/image/logo.jpg'))
+            ->brandLogoHeight('3rem')
+            ->favicon(asset('assets/image/logo.jpg'))
+            ->font('Roboto')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => '#0d6efd',
+                'secondary' => '#adb5bd',
+                'danger' => '#dc3545',
+                'success' => '#198754',
+                'warnig' => '#ffc107',
+                'info' => '#0dcaf0',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

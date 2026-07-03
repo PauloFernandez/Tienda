@@ -30,19 +30,6 @@
         </div>
     </header>
 
-    <!-- Sección de búsqueda -->
-    <section class="search-section">
-        <h2>Busca un producto</h2>
-        <form class="search-form">
-            <input type="text" placeholder="Buscar productos..." class="search-input">
-             
-            <select class="search-select" wire:model.live="category">
-                <option value="">Todas las categorías</option>
-               
-            </select>
-        </form>
-    </section>
-
     @yield('contenido')
 
     <!-- Footer -->
