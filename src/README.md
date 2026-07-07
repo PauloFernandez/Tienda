@@ -83,3 +83,12 @@ public function canAccessPanel(Panel $panel): bool
     //     return false;
 }
 ```
+
+# Refactorizacion de vistas 
+- Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
+- "components/welcome": Solo tiene informacion de Jetstream
+- Vista "welcome": pagina de inicio que instala Laravel por defecto.
+- Remplazamos la vista "welcome" por "home" que sera nuestra vista publica.
+- Para modificar el logo que trea Jetstream por defecto, temenos que ubicar a los componentes:
+  "application-logo.blade, application-mark.blade, authentication-card-logo.blade" y remplazar el codigo svg por la etiqueta img que apunte a la imagen de nuestro logo.
+Por si en un futuro necesitamos actualizar Jetstream, no rompemos nada.
