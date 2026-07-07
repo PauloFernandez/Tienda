@@ -5,9 +5,12 @@ namespace App\Livewire;
 use App\Models\Category;
 use App\Models\Product;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class ProductSearch extends Component
 {
+    use WithPagination;
+
     public $query = "";
     public $category = "";
     public $categories;
@@ -37,7 +40,7 @@ class ProductSearch extends Component
                     ->when($this->category, function ($query) {
                         $query->where('category_id', $this->category);
                     })
-                    ->paginate(4);
+                    ->paginate(3);
 
         return view('livewire.product-search', compact('products'));
     }
