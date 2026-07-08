@@ -84,11 +84,35 @@ public function canAccessPanel(Panel $panel): bool
 }
 ```
 
-# Refactorizacion de vistas 
+# Refactorizacion de vistas para "Visitantes/Clientes"
 - Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
 - "components/welcome": Solo tiene informacion de Jetstream
 - Vista "welcome": pagina de inicio que instala Laravel por defecto.
-- Remplazamos la vista "welcome" por "home" que sera nuestra vista publica.
+- Remplazamos la vista "welcome" por "home" que sera nuestra vista publica, esta vista sera un componente de pagina completa de livewire, asi el catalogo es 
+  dinamico ideal para sitios estilo e-commerce.
+**Indicaciones:** 
+1- Creamos el componente de pagina completa ej:"home", y asignamos un codigo para verificar que se muestra la vista
+2- En el controlador de livewire ej:"Home" tenemos que indicar la siguiente sintaxis 
+```php 
+  #[Layout('layouts.app')] //esto es solo para componentes de pagina completa
+    public function render()
+    {
+        return view('livewire.home');
+    }
+```
+3- En las rutas asignamos la ruta principal ej:
+```php
+  Route::get('/', Home::class)->name('home');
+```
+4- Para evitar que la vista principal de error devemos realizar los siguiente en "layouts/app.blade.php"
+```php
+  @auth
+    @livewire('navigation-menu')
+  @else
+    <x-menu-guest /> //Este es un componente que creamos como menu para las visiteas, Ver codigo en:"views/components/menu-guest.blade.php"
+  @endauth
+```
+
 - Para modificar el logo que trea Jetstream por defecto, temenos que ubicar a los componentes:
   "application-logo.blade, application-mark.blade, authentication-card-logo.blade" y remplazar el codigo svg por la etiqueta img que apunte a la imagen de nuestro logo.
 Por si en un futuro necesitamos actualizar Jetstream, no rompemos nada.

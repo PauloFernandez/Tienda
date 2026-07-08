@@ -16,36 +16,40 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Styles -->
+    <!-- Aqui agregamos los estilos que necesitemos como css personalizados -->
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
         integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+
     @livewireStyles
 </head>
 
 <body class="font-sans antialiased">
+    <x-banner />
     <!-- Header -->
-    <header class="header">
-        <div class="overlay">
+    <div class="min-h-screen bg-gray-100">
+        @auth
+            @livewire('navigation-menu')
+        @else
+            <x-menu-guest />
+        @endauth
 
-            @yield('menu')
+        <!-- Page Heading -->
+        @if (isset($header))
+            <header class="bg-white shadow">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    {{ $header }}
+                </div>
+            </header>
+        @endif
 
-            <div class="header-content">
-                <h1>Bienvenido a MiTienda</h1>
-                <p>Encuentra los mejores productos al mejor precio</p>
-            </div>
-        </div>
-    </header>
-
-    <!-- Page Content -->
-    @yield('contenido')
-
-    @if (Route::has('login'))
-        <div class="h-14.5 hidden lg:block"></div>
-    @endif
-
-    <!-- Footer -->
-    @yield('footer')
+        <!-- Page Content -->
+        <main>
+            {{ $slot }}
+        </main>
+    </div>
 
     @stack('modals')
 
