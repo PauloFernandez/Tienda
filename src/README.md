@@ -69,12 +69,6 @@ public function canAccessPanel(Panel $panel): bool
     // Para desarrollo: dejás pasar a cualquier usuario logueado
     return true;
 
-    // Cuando quieras restringir por email:
-    // return $this->email === 'admin@example.com';
-
-    // O cuando tengas roles:
-    // return $this->hasRole('admin');
-
     // o 
     // if ($panel->getId() === 'admin') 
     //     {

@@ -29,7 +29,7 @@ class DashboardPanelProvider extends PanelProvider
             ->default()
             ->id('dashboard')
             ->path('admin')
-            ->login()
+            //->login()
             //Aplicando cambios en la configuracion del panel principal
             ->profile(false)
             ->userMenuItems([

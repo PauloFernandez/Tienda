@@ -19,7 +19,7 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens;
     use HasRoles;
-    
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
@@ -75,6 +75,8 @@ class User extends Authenticatable implements FilamentUser
     #[Override]
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        //return true;
+
+        return ! $this->hasRole('cliente');
     }
 }
