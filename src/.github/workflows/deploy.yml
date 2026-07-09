@@ -1,0 +1,153 @@
+name: Deploy to InfinityFree
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Configuración de Node.js para Vite y Tailwind
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # Instalar dependencias de Node.js
+    - name: Install Node Dependencies
+      working-directory: ./src 
+      run: npm ci || npm install
+
+    # Compilar assets con Vite (producción)
+    - name: Build assets with Vite
+      working-directory: ./src
+      run: npm run build
+
+    # PHP Setup
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, xml, curl, zip, gd, iconv, pdo, pdo_mysql
+        tools: composer
+
+    - name: Install Composer Dependencies
+      working-directory: ./src
+      run: composer install --no-dev --prefer-dist --no-scripts --no-progress --optimize-autoloader --no-interaction
+        
+    - name: Generate .env file for production
+      working-directory: ./src
+      run: |
+        echo "APP_NAME='Torneos Cup'" >> .env
+        echo "APP_ENV=production" >> .env
+        echo "APP_KEY=${{ secrets.PROD_APP_KEY }}" >> .env
+        echo "APP_DEBUG=false" >> .env
+        echo "APP_URL=${{ secrets.PROD_APP_URL }}" >> .env
+        echo "" >> .env
+        echo "LOG_CHANNEL=stack" >> .env
+        echo "LOG_DEPRECATIONS_CHANNEL=null" >> .env
+        echo "LOG_LEVEL=error" >> .env
+        echo "" >> .env
+        echo "DB_CONNECTION=mysql" >> .env
+        echo "DB_HOST=${{ secrets.PROD_DB_HOST }}" >> .env
+        echo "DB_PORT=3306" >> .env
+        echo "DB_DATABASE=${{ secrets.PROD_DB_DATABASE }}" >> .env
+        echo "DB_USERNAME=${{ secrets.PROD_DB_USERNAME }}" >> .env
+        echo "DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> .env
+        echo "" >> .env
+        echo "BROADCAST_DRIVER=log" >> .env
+        echo "CACHE_DRIVER=file" >> .env
+        echo "FILESYSTEM_DISK=local" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+        echo "SESSION_DRIVER=file" >> .env
+        echo "SESSION_LIFETIME=120" >> .env
+        echo "" >> .env
+        echo "MAIL_MAILER=smtp" >> .env
+        echo "MAIL_HOST=${{ secrets.MAIL_HOST }}" >> .env
+        echo "MAIL_PORT=587" >> .env
+        echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+        echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+        echo "MAIL_ENCRYPTION=tls" >> .env
+        echo "MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}" >> .env
+        echo "MAIL_FROM_NAME='Torneos Cup'" >> .env
+
+    # Opcional pero recomendado para rendimiento (si no causa problemas)
+    - name: Cache Laravel configurations
+      working-directory: ./src
+      run: |
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+
+    # ── Preparar archivos para upload ────────────────
+    - name: Clean unnecessary files
+      working-directory: ./src
+      run: |
+        rm -rf node_modules
+        rm -rf tests
+        rm -f docker-compose.yml
+        rm -f Dockerfile
+        rm -f nginx.conf
+        rm -f vite.config.js
+        rm -f tailwind.config.js
+        rm -f postcss.config.js
+        rm -f phpunit.xml
+        rm -f .editorconfig
+        rm -f .env.example
+        rm -rf resources/js
+        rm -rf resources/css
+        rm -rf resources/sass
+        rm -rf bootstrap/cache/config.php
+        rm -rf bootstrap/cache/routes-v7.php
+        rm -rf bootstrap/cache/services.php
+
+    # Crear .htaccess en raíz
+    - name: Create root .htaccess
+      working-directory: ./src 
+      run: |
+        cat > .htaccess << 'EOF'
+        <IfModule mod_rewrite.c>
+            RewriteEngine On
+            
+            # Evitar bucles
+            RewriteCond %{REQUEST_URI} !^/public/
+            
+            # Redireccionar todo a public/
+            RewriteRule ^(.*)$ public/$1 [L]
+        </IfModule>
+        EOF
+
+    # Permisos correctos
+    - name: Set permissions
+      working-directory: ./src 
+      run: |
+        chmod -R 775 storage bootstrap/cache
+        find storage -type f -exec chmod 644 {} \;
+        find storage -type d -exec chmod 775 {} \;
+        find bootstrap/cache -type f -exec chmod 644 {} \;
+        find bootstrap/cache -type d -exec chmod 775 {} \;
+
+    - name: Deploy to FTP server
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        protocol: ftp
+        port: 21
+        local-dir: .src/
+        server-dir: /htdocs/
+        dangerous-clean-slate: false
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/deploy/**
+          **/node_modules/**
+          **/tests/**
+
+        timeout: 600000

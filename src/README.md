@@ -69,6 +69,8 @@ public function canAccessPanel(Panel $panel): bool
     // Para desarrollo: dejás pasar a cualquier usuario logueado
     return true;
 
+//Luego para produccion 
+ // return ! $this->hasRole('cliente'); //en caso de que pase cualquier rol menos el "cliente"
     // o 
     // if ($panel->getId() === 'admin') 
     //     {
@@ -78,6 +80,50 @@ public function canAccessPanel(Panel $panel): bool
     //     return false;
 }
 ```
+
+# Jetstream como unico login
+Para que Jetstream maneje unicamenta la autenticacion a nuestras vistas sea admin o clientes.
+1- Tenemos que eliminar el "->login()" de DashboardPanelProvider o AdminPanelProvider
+2- Crear un nuevo archivo: app/Actions/Fortify/LoginResponse.php
+3- Pegar este codigo:
+```php
+  <?php
+
+namespace App\Actions\Fortify;
+
+use Illuminate\Http\RedirectResponse;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+
+class LoginResponse implements LoginResponseContract
+{
+    public function toResponse($request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasRole('cliente')) {
+            return redirect()->intended(route('dashboard'));
+        }
+
+        return redirect()->intended(route('/admin'));
+    }
+}
+```
+4- Registrar la clase en app/Providers/FortifyServiceProvider.php, en el método boot(), agregar:
+```php
+use App\Actions\Fortify\LoginResponse;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+
+// Dentro de boot():
+$this->app->bind(LoginResponseContract::class, LoginResponse::class);
+```
+5- Modificar app/Models/User.php, cambiar canAccessPanel() para que clientes no accedan al panel de Filament:
+```php
+public function canAccessPanel(Panel $panel): bool
+{
+    return ! $this->hasRole('cliente');
+}
+```
+Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas correspondientes.
 
 # Refactorizacion de vistas para "Visitantes/Clientes"
 - Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
