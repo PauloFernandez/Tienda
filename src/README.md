@@ -40,6 +40,7 @@ Creamos un usuario para filament
 ```php
 php artisan make:filament-user
 ```
+
 Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
 - Aclaracion "dashboard" es el nombre del panel que le indicamos al momento de identificar el panel inicial.
 **IMPORTANTE**: Cuando indiquemos el nombre del panel NO pongamos "dashboard" por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta /dashboard, y Filament también intenta usarla con el mismo nombre.
@@ -87,7 +88,8 @@ public function canAccessPanel(Panel $panel): bool
 # Refactorizacion de vistas para "Visitantes/Clientes"
 - Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
 - "components/welcome": Solo tiene informacion de Jetstream
-- Vista "welcome": pagina de inicio que instala Laravel por defecto.
+- Vista "welcome": pagina de inicio que instala Laravel por defecto, creamos un component menu y pegamos el codigo que contiene el <header></header>, en este menu iran los 
+  items publicos de la pagina
 - Remplazamos la vista "welcome" por "home" que sera nuestra vista publica, esta vista sera un componente de pagina completa de livewire, asi el catalogo es 
   dinamico ideal para sitios estilo e-commerce.
 **Indicaciones:** 
@@ -112,7 +114,56 @@ public function canAccessPanel(Panel $panel): bool
     <x-menu-guest /> //Este es un componente que creamos como menu para las visiteas, Ver codigo en:"views/components/menu-guest.blade.php"
   @endauth
 ```
+5- Para que el cliente pueda acceder a la pagina de la tienda, tenemos que modificar la ruta ya sea del logo o un enlace, que envie a el "home".
 
+# Personalizacion de vistas
 - Para modificar el logo que trea Jetstream por defecto, temenos que ubicar a los componentes:
   "application-logo.blade, application-mark.blade, authentication-card-logo.blade" y remplazar el codigo svg por la etiqueta img que apunte a la imagen de nuestro logo.
 Por si en un futuro necesitamos actualizar Jetstream, no rompemos nada.
+
+# Roles y Permisos
+- Una ves tengamos construidos nuestro proyecto, tanto la parte "front" Clientes/Visitantes y nuestra parte "backend" Super Admin y empleados.
+- Instalaremos el plugin Shield de filament, este pluging se basa en Spatie-Permission, al 2026 estamos utilizando la V3 con laravel V12 y Filament V3.
+- Aclarada las versiones que utilizamos, seguiremos los pasos que indica la pagina, pero dejeare una guia con tips.
+  Guia de instalacion: 
+  ```php 
+  1- composer require bezhansalleh/filament-shield
+
+  2- php artisan vendor:publish --tag="filament-shield-config"
+
+  3- php artisan vendor:publish --tag=filament-shield-migrations
+
+  4- php artisan migrate
+  ```
+  5- Añadir el HasRoles Rasgo para su modelo de proveedor de autenticación:
+  ```php 
+  use Spatie\Permission\Traits\HasRoles;
+
+  class User extends Authenticatable
+  {
+      use HasRoles;
+  }
+  ```
+  ```php
+  6- php artisan shield:install
+
+  7- php artisan shield:generate --all
+
+  8- php artisan shield:super-admin //Si no nos creeo el super_admin en el paso anterior
+  ```
+  Ahora debemos agregas el campo Rol al recurso del Usuario
+  ```php
+  //En el formulario
+  Forms\Components\Select::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
+
+  //En la tabla
+  Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Rol')
+                    ->badge() //Mostrar múltiples roles
+                    ->default('Sin rol') //Evita problemas si un usuario no tiene rol
+                    ->searchable(),
+  ```

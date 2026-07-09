@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use Filament\Http\Middleware\Authenticate;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -39,17 +40,17 @@ class DashboardPanelProvider extends PanelProvider
             ->brandLogo(asset('assets/image/logo.jpg'))
             ->brandLogoHeight('3rem')
             ->favicon(asset('assets/image/logo.jpg'))
-            ->navigationGroups([
-                'Sistema',
-                'Empleados',
-                'Configuracion',
-            ])
-            ->renderHook(
-                PanelsRenderHook::HEAD_END,
-                fn() => '<style>
-                        .fi-sidebar-nav{background-color:#be1a1a }
-                    </style>'
-            )
+            // ->navigationGroups([
+            //     'Sistema',
+            //     'Empleados',
+            //     'Configuracion',
+            // ])
+            // ->renderHook(
+            //     PanelsRenderHook::HEAD_END,
+            //     fn() => '<style>
+            //             .fi-sidebar-nav{background-color:#be1a1a }
+            //         </style>'
+            // )
             ->font('Roboto')
             ->colors([
                 'primary' => '#0d6efd',
@@ -80,6 +81,9 @@ class DashboardPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+            ])
+            ->plugins([
+                FilamentShieldPlugin::make(),
             ])
             ->authMiddleware([
                 Authenticate::class,
