@@ -82,7 +82,7 @@ public function canAccessPanel(Panel $panel): bool
 ```
 
 # Jetstream como unico login
-Para que Jetstream maneje unicamenta la autenticacion a nuestras vistas sea admin o clientes.
+Para que Jetstream maneje únicamente la autenticación a nuestras vistas, que pueden ser las creadas en filament "panel administrativo" o Livewire "e-commerce".
 1- Tenemos que eliminar el "->login()" de DashboardPanelProvider o AdminPanelProvider
 2- Crear un nuevo archivo: app/Actions/Fortify/LoginResponse.php
 3- Pegar este codigo:
@@ -123,6 +123,25 @@ public function canAccessPanel(Panel $panel): bool
     return ! $this->hasRole('cliente');
 }
 ```
+5- Para no tener problemas de cache tenemos que agregar en el proveedor de servicio "app/Providers/AppServiceProvider.php", este codigo:
+```php 
+
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+
+public function boot(): void
+{
+    $flushPermissionCache = fn () => app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    Role::saved($flushPermissionCache);
+    Role::deleted($flushPermissionCache);
+    Permission::saved($flushPermissionCache);
+    Permission::deleted($flushPermissionCache);
+}
+```
+- Esto asegura que cualquier guardado o borrado de rol/permiso —venga de Shield, de un seeder, de Tinker, o de donde sea— dispare la limpieza de caché automáticamente, sin que dependas de que el flujo interno de Shield lo haga bien en todos los casos.
+
 Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas correspondientes.
 
 # Refactorizacion de vistas para "Visitantes/Clientes"
