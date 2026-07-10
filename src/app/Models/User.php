@@ -9,13 +9,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Override;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     use HasApiTokens;
     use HasRoles;
@@ -26,6 +27,8 @@ class User extends Authenticatable implements FilamentUser
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
+    //public $avatar_url = [$appends];
 
     /**
      * The attributes that are mass assignable.
@@ -70,6 +73,12 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    #[Override]
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->profile_photo_url;
     }
 
     #[Override]

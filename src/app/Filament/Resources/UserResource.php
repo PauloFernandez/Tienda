@@ -78,7 +78,7 @@ class UserResource extends Resource
                 // Tables\Columns\TextColumn::make('current_team_id')
                 //     ->numeric()
                 //     ->sortable(),
-                Tables\Columns\TextColumn::make('profile_photo_path')
+                Tables\Columns\ImageColumn::make('profile_photo_path')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('Rol')
