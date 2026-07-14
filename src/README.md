@@ -23,7 +23,6 @@ Migrar la base de datos
 ```php
 php artisan migrate
 ```
-
 Si ingresamos a la app en la vista welcome aparece "login" y "Register"
 Luego remplasaremos la codificacion de esta vista para lograr nuestra vista inicial "home"
 
@@ -43,9 +42,9 @@ php artisan make:filament-user
 
 Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
 - Aclaracion "dashboard" es el nombre del panel que le indicamos al momento de identificar el panel inicial.
-**IMPORTANTE**: Cuando indiquemos el nombre del panel NO pongamos "dashboard" por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta /dashboard, y Filament también intenta usarla con el mismo nombre.
+**IMPORTANTE**: Cuando indiquemos el nombre del panel *NO pongamos "dashboard"* por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta "/dashboard", y Filament también intenta usarla con el mismo nombre.
 
-Esplicado lo anterior, si indicamos el nombre del panel como "dashboard", al ingresar no da un error que indica que la ruta no esta definida, para esto devemos realizar algunos cambios.
+Esplicado lo anterior, si indicamos el nombre del panel como "dashboard", al ingresar nos da un error que indica que la ruta no esta definida, para esto devemos realizar algunos cambios.
 
 - Cambiar el path del panel en DashboardPanelProvider.php 
 ```php
@@ -89,6 +88,7 @@ Para que Jetstream maneje únicamente la autenticación a nuestras vistas, que p
 ```php
   <?php
 
+//Esta clase va a redirigir según tipo de rol
 namespace App\Actions\Fortify;
 
 use Illuminate\Http\RedirectResponse;
@@ -121,6 +121,13 @@ $this->app->bind(LoginResponseContract::class, LoginResponse::class);
 public function canAccessPanel(Panel $panel): bool
 {
     return ! $this->hasRole('cliente');
+    
+    // o 
+    // if ($panel->getId() === 'admin') 
+    //     {
+    //         return $this->hasAnyRole(['Administrador', 'Empleado']); //Si tenemos ya Roles definidos para el acceso a filament
+    //     }
+    //     return false;
 }
 ```
 5- Para no tener problemas de cache tenemos que agregar en el proveedor de servicio "app/Providers/AppServiceProvider.php", este codigo:
@@ -140,9 +147,164 @@ public function boot(): void
     Permission::deleted($flushPermissionCache);
 }
 ```
-- Esto asegura que cualquier guardado o borrado de rol/permiso —venga de Shield, de un seeder, de Tinker, o de donde sea— dispare la limpieza de caché automáticamente, sin que dependas de que el flujo interno de Shield lo haga bien en todos los casos.
+- Esto asegura que cualquier guardado o borrado de rol/permiso que venga de "Shield, de un seeder, de Tinker, o de donde sea" dispare la limpieza de caché automáticamente, sin que dependa de que el flujo interno de Shield lo haga bien en todos los casos.
 
 Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas correspondientes.
+
+# User solo para login 
+- Vamos a separar auth de perfil
+  1) Estructura de tablas
+```php
+  users            -> solo auth: id, email, password, remember_token, timestamps
+  clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
+  empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
+
+  // migration clientes
+Schema::create('clientes', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+    $table->string('nombre');
+    // ...otros campos
+    $table->timestamps();
+});
+
+// migration empleados (igual, con sus campos propios)
+```
+ 2) En los modelos
+```php
+//Modelo User
+  class User extends Authenticatable
+{
+    public function cliente() { return $this->hasOne(Cliente::class); }
+    public function empleado() { return $this->hasOne(Empleado::class); }
+
+    // Truco clave: mantiene compatibilidad con TODO el código de Jetstream/Filament
+    // que ya espera $user->name, sin tener la columna en la tabla.
+    public function getNameAttribute(): ?string
+    {
+        return $this->cliente?->nombre ?? $this->empleado?->nombre;
+    }
+}
+
+// Con el accessor getNameAttribute, todas las vistas Blade que hoy hacen {{ $user->name }} (nav de Jetstream, saludo, notificaciones, avatar por iniciales, etc.) siguen funcionando sin tocarlas.
+
+//Modelo Cliente
+class Cliente extends Model 
+{ 
+  public function user() 
+  { 
+    return $this->belongsTo(User::class); 
+  } 
+}
+
+//Modelo Empleado
+class Empleado extends Model 
+{ 
+  public function user() 
+  { 
+    return $this->belongsTo(User::class); 
+  } 
+}
+```
+  3) Archivo a modificar:
+- A. CreateNewUser.php (registro de clientes vía Jetstream)
+  Hoy hace un solo User::create([...]). Ahora necesita crear ambas filas en una transacción:
+```php
+  public function create(array $input): User
+{
+    Validator::make($input, [
+        'nombre' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+        'password' => $this->passwordRules(),
+        //Validamos todas las columnas que necesitemos para guardar los datos del cliente segun necesidad de negocio
+    ])->validate();
+
+    return DB::transaction(function () use ($input) {
+        $user = User::create([
+            'email' => $input['email'],
+            'password' => Hash::make($input['password']),
+        ]);
+
+        $user->cliente()->create([
+            'nombre' => $input['nombre'],
+            //Indicamos todas las columnas que necesitemos para guardar los datos del cliente segun necesidad de negocio
+        ]);
+
+        return $user;
+    });
+}
+```
+  B. UpdateUserProfileInformation.php (Actiualizacion de clientes vía Jetstream)
+  Ídem: en vez de actualizar $user->name, actualiza $user->cliente->update([...])
+  ```php
+    public function update(User $user, array $input): void
+    {
+        Validator::make($input, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
+        ])->validateWithBag('updateProfileInformation');
+
+        if (isset($input['photo'])) {
+            $user->updateProfilePhoto($input['photo']);
+        }
+
+        if ($input['email'] !== $user->email &&
+            $user instanceof MustVerifyEmail) {
+            $this->updateVerifiedUser($user, $input);
+        } else {
+            return DB::transaction(function () use ($input) {
+              $user = User::create([
+                  'email' => $input['email'],
+                  'password' => Hash::make($input['password']),
+              ]);
+
+              $user->cliente->update([
+                  'nombre' => $input['nombre'],
+                  //Indicamos todas las columnas que necesitemos para guardar los datos del cliente segun necesidad de negocio
+              ]);
+
+              return $user;
+          });
+        }
+    }
+  ```
+  4) Registro de empleados vía Filament
+- Filament no sabe nada de esto por defecto: tenés que hookear la creación. Lo más limpio es sobreescribir el método de creación en la página CreateEmpleado:
+```php
+  class CreateEmpleado extends CreateRecord
+  {
+      protected static string $resource = EmpleadoResource::class;
+
+      protected function handleRecordCreation(array $data): Model
+      {
+          return DB::transaction(function () use ($data) {
+              $user = User::create([
+                  'email' => $data['email'],
+                  'password' => Hash::make($data['password']),
+              ]);
+
+              return $user->empleado()->create([
+                  'nombre' => $data['nombre'],
+                  // resto de campos propios de empleado
+              ]);
+          });
+      }
+  }
+```
+- Y en el EmpleadoResource::form() agregás los campos email y password (con Hidden/dehydrated(false) para que no intente guardarlos directo en la tabla empleados).
+```php
+return $form
+    ->schema([
+        Forms\Components\TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
+        Forms\Components\TextInput::make('email')
+                        ->email()
+                        ->required()
+                        ->maxLength(255),
+    ])
+```
 
 # Refactorizacion de vistas para "Visitantes/Clientes"
 - Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
