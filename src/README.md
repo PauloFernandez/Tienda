@@ -155,7 +155,7 @@ Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas cor
 - Vamos a separar auth de perfil
   1) Estructura de tablas
 ```php
-  users            -> solo auth: id, email, password, remember_token, timestamps
+  users            -> solo auth: id, nombre, apellido, email, password, remember_token, timestamps
   clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
   empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
 
@@ -163,7 +163,6 @@ Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas cor
 Schema::create('clientes', function (Blueprint $table) {
     $table->id();
     $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
-    $table->string('nombre');
     // ...otros campos
     $table->timestamps();
 });
@@ -235,41 +234,26 @@ class Empleado extends Model
 }
 ```
   B. UpdateUserProfileInformation.php (Actiualizacion de clientes vía Jetstream)
-  Ídem: en vez de actualizar $user->name, actualiza $user->cliente->update([...])
   ```php
     public function update(User $user, array $input): void
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
+          //A los datos que ya estan agragar esta linea
+            'last_name' => ['required', 'string', 'max:255'],
         ])->validateWithBag('updateProfileInformation');
-
-        if (isset($input['photo'])) {
-            $user->updateProfilePhoto($input['photo']);
-        }
 
         if ($input['email'] !== $user->email &&
             $user instanceof MustVerifyEmail) {
             $this->updateVerifiedUser($user, $input);
         } else {
-            return DB::transaction(function () use ($input) {
-              $user = User::create([
-                  'email' => $input['email'],
-                  'password' => Hash::make($input['password']),
-              ]);
-
-              $user->cliente->update([
-                  'nombre' => $input['nombre'],
-                  //Indicamos todas las columnas que necesitemos para guardar los datos del cliente segun necesidad de negocio
-              ]);
-
-              return $user;
-          });
+            $user->forceFill([
+              //A los datos que ya estan agragar esta linea
+              'last_name' => $input['last_name'],
+            ])->save();
         }
     }
   ```
-  4) Registro de empleados vía Filament
+  1) Registro de empleados vía Filament
 - Filament no sabe nada de esto por defecto: tenés que hookear la creación. Lo más limpio es sobreescribir el método de creación en la página CreateEmpleado:
 ```php
   class CreateEmpleado extends CreateRecord
