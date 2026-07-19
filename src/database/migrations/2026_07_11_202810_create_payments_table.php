@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('payment_method_id')->constrained()->restrictOnDelete();
 
-            $table->decimal('price', 10, 2);
+            $table->decimal('amount', 10, 2);
             $table->enum('state', ['PENDIENTE', 'COMPLETADO', 'FALLIDO', 'REEMBOLSADO'])->default('PENDIENTE');
             $table->string('transaction_reference')->nullable();
             $table->dateTime('paid_at')->nullable();

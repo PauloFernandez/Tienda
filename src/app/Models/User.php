@@ -11,6 +11,7 @@ use Spatie\Permission\Traits\HasRoles;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
@@ -28,18 +29,12 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     use Notifiable;
     use TwoFactorAuthenticatable;
 
-    //public $avatar_url = [$appends];
-
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    protected $fillable = ['name', 'last_name', 'email', 'password'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -73,6 +68,31 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function cutomer(): HasOne
+    {
+        return $this->hasOne(Customer::class);
+    }
+
+    public function employee(): HasOne
+    {
+        return $this->hasOne(Employee::class);
+    }
+
+    public function isCutomer(): bool
+    {
+        return $this->customer()->exists();
+    }
+
+    public function isEmployee(): bool
+    {
+        return $this->employee()->exists();
+    }
+
+    public function getNameAttribute(): string
+    {
+        return trim("{$this->name} {$this->last_name}");
     }
 
     #[Override]

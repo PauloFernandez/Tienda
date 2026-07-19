@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->unsignedInteger('stock')->default(0);
             $table->decimal('additional_price', 10, 2)->default(0);
-            $table->string('image')->nullable();
             $table->boolean('active')->default(true);
 
             $table->timestamps();

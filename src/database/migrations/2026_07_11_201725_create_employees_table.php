@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
 
-            $table->string('name');
-            $table->string('last_name');
             $table->enum('type_document', ['DNI', 'CI', 'PASSPORT'])->nullable();
             $table->string('number_document', 20)->nullable()->unique();
             $table->string('phone', 20)->nullable();
