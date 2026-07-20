@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
 
-            $table->enum('type_document', ['DNI', 'CI', 'PASSPORT'])->nullable();
-            $table->string('number_document', 20)->nullable()->unique();
+            $table->enum('type_document', ['DNI', 'CI', 'PASSPORT']);
+            $table->string('number_document', 20)->nullable();
             $table->string('phone', 20)->nullable();
             $table->date('birthdate')->nullable();
             $table->enum('gender', ['M', 'F', 'other'])->nullable();

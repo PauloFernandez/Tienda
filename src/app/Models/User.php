@@ -70,7 +70,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         ];
     }
 
-    public function cutomer(): HasOne
+    public function customer(): HasOne
     {
         return $this->hasOne(Customer::class);
     }
@@ -80,7 +80,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasOne(Employee::class);
     }
 
-    public function isCutomer(): bool
+    public function isCustomer(): bool
     {
         return $this->customer()->exists();
     }
