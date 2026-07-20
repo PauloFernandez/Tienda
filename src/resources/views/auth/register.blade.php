@@ -14,6 +14,36 @@
                 <x-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
             </div>
 
+            <div>
+                <x-label for="last_name" value="{{ __('Last Name') }}" />
+                <x-input id="last_name" class="block mt-1 w-full" type="text" name="last_name" :value="old('last_name')" required autofocus autocomplete="last_name" />
+            </div>
+
+            <div>
+                <x-label for="type_document" value="{{ __('Type document') }}" />
+                <x-input id="type_document" class="block mt-1 w-full" type="text" name="type_document" :value="old('type_document')" required autofocus autocomplete="type_document" />
+            </div>
+
+            <div>
+                <x-label for="number_document" value="{{ __('Number document') }}" />
+                <x-input id="number_document" class="block mt-1 w-full" type="text" name="number_document" :value="old('number_document')" required autofocus autocomplete="number_document" />
+            </div>
+
+            <div>
+                <x-label for="phone" value="{{ __('Phone') }}" />
+                <x-input id="phone" class="block mt-1 w-full" type="text" name="phone" :value="old('phone')" required autofocus autocomplete="phone" />
+            </div>
+
+            <div>
+                <x-label for="birthdate" value="{{ __('Birthdate') }}" />
+                <x-input id="birthdate" class="block mt-1 w-full" type="date" name="birthdate" :value="old('birthdate')" required autofocus autocomplete="birthdate" />
+            </div>
+
+            <div>
+                <x-label for="gender" value="{{ __('Gender') }}" />
+                <x-input id="gender" class="block mt-1 w-full" type="text" name="gender" :value="old('gender')" required autofocus autocomplete="gender" />
+            </div>
+
             <div class="mt-4">
                 <x-label for="email" value="{{ __('Email') }}" />
                 <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
