@@ -35,7 +35,7 @@ composer require filament/filament:"^3.3" -W
 php artisan filament:install --panels
 ```
 
-Creamos un usuario para filament
+Creamos un usuario para filament luego de crear las tablas para Cliente y Empleado
 ```php
 php artisan make:filament-user
 ```
@@ -147,7 +147,7 @@ public function boot(): void
     Permission::deleted($flushPermissionCache);
 }
 ```
-- Esto asegura que cualquier guardado o borrado de rol/permiso que venga de "Shield, de un seeder, de Tinker, o de donde sea" dispare la limpieza de caché automáticamente, sin que dependa de que el flujo interno de Shield lo haga bien en todos los casos.
+- Esto asegura que cualquier guardado o borrado de rol/permiso que venga de "Shield", de un seeder, de Tinker, o de donde sea" dispare la limpieza de caché automáticamente, sin que dependa de que el flujo interno de Shield lo haga bien en todos los casos.
 
 Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas correspondientes.
 

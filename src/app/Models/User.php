@@ -5,16 +5,18 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+
 use Override;
 
 class User extends Authenticatable implements FilamentUser, HasAvatar
@@ -90,9 +92,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->employee()->exists();
     }
 
-    public function getNameAttribute(): string
+    protected function fullName(): Attribute
     {
-        return trim("{$this->name} {$this->last_name}");
+        return Attribute::make(
+            get: fn() => trim("{$this->attributes['name']} {$this->attributes['last_name']}"),
+        );
     }
 
     #[Override]

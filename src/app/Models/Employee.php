@@ -17,6 +17,7 @@ class Employee extends Model
     public function casts(): array
     {
         return [
+            'birthdate' => 'date',
             'date_hiring' => 'date',
             'salary' => 'decimal:2',
             'active' => 'boolean',
