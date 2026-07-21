@@ -5,28 +5,20 @@
 composer create-project "laravel/laravel:^12.0" .
 ```
 
-## 2- Instalamos Jetstream
+## 2- Instalamos Jetstream "v 5.x"
 ```php
 composer require laravel/jetstream
 ```
-
 ## 3- Instalar con Livewire
 ```php
 php artisan jetstream:install livewire
 ```
+
 Instalar dependencias
 ```php
 npm install
 npm run build
 ```
-Migrar la base de datos
-```php
-php artisan migrate
-```
-Si ingresamos a la app en la vista welcome aparece "login" y "Register"
-Luego remplasaremos la codificacion de esta vista para lograr nuestra vista inicial "home"
-
----
 
 ## 4- Instalar Filament
 ```php
@@ -35,9 +27,92 @@ composer require filament/filament:"^3.3" -W
 php artisan filament:install --panels
 ```
 
-Creamos un usuario para filament luego de crear las tablas para Cliente y Empleado
+**ADVERTENCIA** 
+- Antes de migrar la base de datos que trae la instaltacion debemos crear las tabla "clientes" y "empleados".
+- En la tabla 'user' vamos a agregar la columna 'apellido'. (esto nos servira para la logica de negocio)
+- En las tablas 'cliente' y 'empleado' indicaremos las columnas para datos necesarios, menos los datos de login (nombre, apellido, email, etc.)
+
+# User solo para login 
+- Vamos a separar auth de perfil
+  1) Estructura de tablas
+```php
+  users            -> solo auth: id, nombre, 'apellido->nullable', email, password, remember_token, timestamps
+  clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
+  empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
+
+  // migration clientes
+Schema::create('clientes', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+    // ...otros campos
+    $table->timestamps();
+});
+
+// migration empleados (igual, con sus campos propios)
+```
+ 2) En los modelos
+```php
+//Modelo User
+  class User extends Authenticatable implements FilamentUser, HasAvatar
+{
+    public function cliente() { return $this->hasOne(Cliente::class); }
+    public function empleado() { return $this->hasOne(Empleado::class); }
+    public function isCustomer(): bool { return $this->customer()->exists(); }
+    public function isEmployee(): bool { return $this->employee()->exists(); }
+
+    // Truco clave: mantiene compatibilidad con TODO el código de Jetstream/Filament
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => trim("{$this->attributes['name']} {$this->attributes['last_name']}"),
+        );
+    }
+
+    #[Override]
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->profile_photo_url;
+    }
+
+    #[Override]
+    public function canAccessPanel(Panel $panel): bool
+    {
+      // Para desarrollo: dejás pasar a cualquier usuario logueado
+        return true;
+    }
+}
+
+// Con el accessor fullName, todas las vistas Blade que hoy hacen {{ $user->name }} (nav de Jetstream, saludo, notificaciones, avatar por iniciales, etc.) siguen funcionando sin tocarlas.
+
+//Modelo Cliente
+class Cliente extends Model 
+{ 
+  public function user() { return $this->belongsTo(User::class); } 
+}
+
+//Modelo Empleado
+class Empleado extends Model 
+{ 
+  public function user() { return $this->belongsTo(User::class); } 
+}
+```
+
+Migrar la base de datos
+```php
+php artisan migrate
+```
+
+Si ingresamos a la app en la vista welcome aparece "login" y "Register"
+Luego remplasaremos la codificacion de esta vista para lograr nuestra vista inicial "home"
+
+Creamos un usuario para filament
 ```php
 php artisan make:filament-user
+```
+
+- Tenemos que generar las vistas
+```php
+  php artisan make:filament-resource NombreModelo --generate
 ```
 
 Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
@@ -58,26 +133,6 @@ public function panel(Panel $panel): Panel
         ->id('dashboard')
         ->path('admin')  // <-- cambiar 'dashboard' por 'admin'
         ->login() // <-- cuando terminemos de configurar el panel admin para los administradores eliminamos esta linea para que Jetstream realice esta funcion.
-}
-```
-
-- En el modelo 'User' agregar esta linea para que deje pasar cualquier usuario mientras estamos desarrollando.
-```php
-#[Override]
-public function canAccessPanel(Panel $panel): bool
-{
-    // Para desarrollo: dejás pasar a cualquier usuario logueado
-    return true;
-
-//Luego para produccion 
- // return ! $this->hasRole('cliente'); //en caso de que pase cualquier rol menos el "cliente"
-    // o 
-    // if ($panel->getId() === 'admin') 
-    //     {
-    //         return $this->hasAnyRole(['Administrador', 'Empleado']);
-    //     }
-
-    //     return false;
 }
 ```
 
@@ -114,6 +169,15 @@ public function canAccessPanel(Panel $panel): bool
 
   8- php artisan shield:super-admin //Si no nos creeo el super_admin en el paso anterior
   ```
+
+# Jetstream como unico login
+Para que Jetstream maneje únicamente la autenticación a nuestras vistas, que pueden ser las creadas en filament "panel administrativo" o Livewire "e-commerce".
+
+- Tenemos que crear los roles que necesitemos
+- Para un Sistema estilo e-commerce necesitaremos el rol 'cliente' para que se pueda registrar y acceder a su dashboard.
+- Los roles para el manejo interno del sistema seran dinamicos, solo los usuarios con permisos podran dar de alta a nuevos usuarios en el formulario de Empleados.
+  
+## Configuracion Recurso de Filament
   Ahora debemos agregar el campo Rol al recurso de Empleado
   ```php
   //En el formulario
@@ -135,9 +199,9 @@ public function canAccessPanel(Panel $panel): bool
 
 
 
-# Jetstream como unico login
-Para que Jetstream maneje únicamente la autenticación a nuestras vistas, que pueden ser las creadas en filament "panel administrativo" o Livewire "e-commerce".
-1- Tenemos que eliminar el "->login()" de DashboardPanelProvider o AdminPanelProvider
+
+
+
 2- Crear un nuevo archivo: app/Actions/Fortify/LoginResponse.php
 3- Pegar este codigo:
 ```php
@@ -204,63 +268,11 @@ public function boot(): void
 ```
 - Esto asegura que cualquier guardado o borrado de rol/permiso que venga de "Shield", de un seeder, de Tinker, o de donde sea" dispare la limpieza de caché automáticamente, sin que dependa de que el flujo interno de Shield lo haga bien en todos los casos.
 
+
 Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas correspondientes.
 
-# User solo para login 
-- Vamos a separar auth de perfil
-  1) Estructura de tablas
-```php
-  users            -> solo auth: id, nombre, apellido, email, password, remember_token, timestamps
-  clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
-  empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
 
-  // migration clientes
-Schema::create('clientes', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
-    // ...otros campos
-    $table->timestamps();
-});
-
-// migration empleados (igual, con sus campos propios)
-```
- 2) En los modelos
-```php
-//Modelo User
-  class User extends Authenticatable
-{
-    public function cliente() { return $this->hasOne(Cliente::class); }
-    public function empleado() { return $this->hasOne(Empleado::class); }
-
-    // Truco clave: mantiene compatibilidad con TODO el código de Jetstream/Filament
-    // que ya espera $user->name, sin tener la columna en la tabla.
-    public function getNameAttribute(): ?string
-    {
-        return $this->cliente?->nombre ?? $this->empleado?->nombre;
-    }
-}
-
-// Con el accessor getNameAttribute, todas las vistas Blade que hoy hacen {{ $user->name }} (nav de Jetstream, saludo, notificaciones, avatar por iniciales, etc.) siguen funcionando sin tocarlas.
-
-//Modelo Cliente
-class Cliente extends Model 
-{ 
-  public function user() 
-  { 
-    return $this->belongsTo(User::class); 
-  } 
-}
-
-//Modelo Empleado
-class Empleado extends Model 
-{ 
-  public function user() 
-  { 
-    return $this->belongsTo(User::class); 
-  } 
-}
-```
-  3) Archivo a modificar:
+## Configuracion Actions de Fortify Jetstream
 - A. CreateNewUser.php (registro de clientes vía Jetstream)
   Hoy hace un solo User::create([...]). Ahora necesita crear ambas filas en una transacción:
 ```php
@@ -288,6 +300,7 @@ class Empleado extends Model
     });
 }
 ```
+  
   B. UpdateUserProfileInformation.php (Actiualizacion de clientes vía Jetstream)
   ```php
     public function update(User $user, array $input): void
@@ -381,4 +394,4 @@ return $form
   "application-logo.blade, application-mark.blade, authentication-card-logo.blade" y remplazar el codigo svg por la etiqueta img que apunte a la imagen de nuestro logo.
 Por si en un futuro necesitamos actualizar Jetstream, no rompemos nada.
 
-
+- Tenemos que eliminar el "->login()" de DashboardPanelProvider o AdminPanelProvider
