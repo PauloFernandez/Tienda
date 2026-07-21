@@ -42,7 +42,8 @@ php artisan make:filament-user
 
 Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
 - Aclaracion "dashboard" es el nombre del panel que le indicamos al momento de identificar el panel inicial.
-**IMPORTANTE**: Cuando indiquemos el nombre del panel *NO pongamos "dashboard"* por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta "/dashboard", y Filament también intenta usarla con el mismo nombre.
+
+- **IMPORTANTE**: Cuando indiquemos el nombre del panel *NO pongamos "dashboard"* por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta "/dashboard". Filament también y intenta usarla con el mismo nombre.
 
 Esplicado lo anterior, si indicamos el nombre del panel como "dashboard", al ingresar nos da un error que indica que la ruta no esta definida, para esto devemos realizar algunos cambios.
 
@@ -60,7 +61,7 @@ public function panel(Panel $panel): Panel
 }
 ```
 
-- En el modelo User agregar esta linea para que deje pasar cualquier usuario mientras estamos desarrollando.
+- En el modelo 'User' agregar esta linea para que deje pasar cualquier usuario mientras estamos desarrollando.
 ```php
 #[Override]
 public function canAccessPanel(Panel $panel): bool
@@ -79,6 +80,60 @@ public function canAccessPanel(Panel $panel): bool
     //     return false;
 }
 ```
+
+# Roles y Permisos
+- Para poder configurar nuestro login unico con Jetstream y probar que el mismo redirija a las vistas correctas tanto la parte "front" Clientes/Visitantes y nuestra parte "backend" Super Admin y empleados, necesitamos los roles.
+- Instalaremos el plugin Shield de filament, este pluging se basa en Spatie-Permission, al 2026 estamos utilizando la V3 con laravel V12 y Filament V3.
+- Aclarada las versiones que utilizamos, seguiremos los pasos que indica la pagina, pero dejeare una guia con tips.
+  Guia de instalacion: 
+  ```php 
+  1- composer require bezhansalleh/filament-shield
+
+  2- php artisan vendor:publish --tag="filament-shield-config"
+
+  3- php artisan vendor:publish --tag=filament-shield-migrations
+
+  4- php artisan migrate
+  ```
+
+  5- Añadir el HasRoles para su modelo de proveedor de autenticación:
+  ```php 
+  use Spatie\Permission\Traits\HasRoles;
+
+  class User extends Authenticatable
+  {
+      use HasRoles;
+  }
+  ```
+
+  - Instalar Shield
+  ```php
+  6- php artisan shield:install
+
+  7- php artisan shield:generate --all //este comando lo podemos utilizar mas adelante a medida que lo vallamos necesitando
+
+  8- php artisan shield:super-admin //Si no nos creeo el super_admin en el paso anterior
+  ```
+  Ahora debemos agregar el campo Rol al recurso de Empleado
+  ```php
+  //En el formulario
+  Forms\Components\Select::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
+  // Agregamos los demas datos como 'nombre', 'apellido', 'email', etc. los necesarios.
+
+  //En la tabla
+  Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Rol')
+                    ->badge() //Mostrar múltiples roles
+                    ->default('Sin rol') //Evita problemas si un usuario no tiene rol
+                    ->searchable(),
+   // Agregamos los demas datos como 'nombre', 'apellido', 'email', etc. los necesarios.
+  ```
+
+
 
 # Jetstream como unico login
 Para que Jetstream maneje únicamente la autenticación a nuestras vistas, que pueden ser las creadas en filament "panel administrativo" o Livewire "e-commerce".
@@ -326,49 +381,4 @@ return $form
   "application-logo.blade, application-mark.blade, authentication-card-logo.blade" y remplazar el codigo svg por la etiqueta img que apunte a la imagen de nuestro logo.
 Por si en un futuro necesitamos actualizar Jetstream, no rompemos nada.
 
-# Roles y Permisos
-- Una ves tengamos construidos nuestro proyecto, tanto la parte "front" Clientes/Visitantes y nuestra parte "backend" Super Admin y empleados.
-- Instalaremos el plugin Shield de filament, este pluging se basa en Spatie-Permission, al 2026 estamos utilizando la V3 con laravel V12 y Filament V3.
-- Aclarada las versiones que utilizamos, seguiremos los pasos que indica la pagina, pero dejeare una guia con tips.
-  Guia de instalacion: 
-  ```php 
-  1- composer require bezhansalleh/filament-shield
 
-  2- php artisan vendor:publish --tag="filament-shield-config"
-
-  3- php artisan vendor:publish --tag=filament-shield-migrations
-
-  4- php artisan migrate
-  ```
-  5- Añadir el HasRoles Rasgo para su modelo de proveedor de autenticación:
-  ```php 
-  use Spatie\Permission\Traits\HasRoles;
-
-  class User extends Authenticatable
-  {
-      use HasRoles;
-  }
-  ```
-  ```php
-  6- php artisan shield:install
-
-  7- php artisan shield:generate --all
-
-  8- php artisan shield:super-admin //Si no nos creeo el super_admin en el paso anterior
-  ```
-  Ahora debemos agregas el campo Rol al recurso del Usuario
-  ```php
-  //En el formulario
-  Forms\Components\Select::make('roles')
-                    ->relationship('roles', 'name')
-                    ->multiple()
-                    ->preload()
-                    ->searchable(),
-
-  //En la tabla
-  Tables\Columns\TextColumn::make('roles.name')
-                    ->label('Rol')
-                    ->badge() //Mostrar múltiples roles
-                    ->default('Sin rol') //Evita problemas si un usuario no tiene rol
-                    ->searchable(),
-  ```
