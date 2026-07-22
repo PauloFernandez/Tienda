@@ -14,13 +14,13 @@ composer require laravel/jetstream
 php artisan jetstream:install livewire
 ```
 
-Instalar dependencias
+## 4- Instalar dependencias
 ```php
 npm install
 npm run build
 ```
 
-## 4- Instalar Filament
+## 5- Instalar Filament
 ```php
 composer require filament/filament:"^3.3" -W
 
@@ -32,115 +32,117 @@ php artisan filament:install --panels
 - En la tabla 'user' vamos a agregar la columna 'apellido'. (esto nos servira para la logica de negocio)
 - En las tablas 'cliente' y 'empleado' indicaremos las columnas para datos necesarios, menos los datos de login (nombre, apellido, email, etc.)
 
-# User solo para login 
-- Vamos a separar auth de perfil
-  1) Estructura de tablas
-```php
-  users            -> solo auth: id, nombre, 'apellido->nullable', email, password, remember_token, timestamps
-  clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
-  empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
+## User solo para login 
+  - Vamos a separar auth de perfil
+    1) Estructura de tablas
+  ```php
+    users            -> solo auth: id, nombre, 'apellido->nullable', email, password, remember_token, timestamps
+    clientes         -> id, user_id (FK único a users), nombre, telefono, etc.
+    empleados        -> id, user_id (FK único a users), nombre, cargo, etc.
 
-  // migration clientes
-Schema::create('clientes', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
-    // ...otros campos
-    $table->timestamps();
-});
+    // migration clientes
+  Schema::create('clientes', function (Blueprint $table) {
+      $table->id();
+      $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+      // ...otros campos
+      $table->timestamps();
+  });
 
-// migration empleados (igual, con sus campos propios)
-```
- 2) En los modelos
-```php
-//Modelo User
-  class User extends Authenticatable implements FilamentUser, HasAvatar
-{
-    public function cliente() { return $this->hasOne(Cliente::class); }
-    public function empleado() { return $this->hasOne(Empleado::class); }
-    public function isCustomer(): bool { return $this->customer()->exists(); }
-    public function isEmployee(): bool { return $this->employee()->exists(); }
+  // migration empleados (igual, con sus campos propios)
+  ```
 
-    // Truco clave: mantiene compatibilidad con TODO el código de Jetstream/Filament
-    protected function fullName(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => trim("{$this->attributes['name']} {$this->attributes['last_name']}"),
-        );
-    }
+   2) En los modelos
+  ```php
+  //Modelo User
+    class User extends Authenticatable implements FilamentUser, HasAvatar
+  {
+      public function cliente() { return $this->hasOne(Cliente::class); }
+      public function empleado() { return $this->hasOne(Empleado::class); }
+      public function isCustomer(): bool { return $this->customer()->exists(); }
+      public function isEmployee(): bool { return $this->employee()->exists(); }
 
-    #[Override]
-    public function getFilamentAvatarUrl(): ?string
-    {
-        return $this->profile_photo_url;
-    }
+      // Truco clave: mantiene compatibilidad con TODO el código de Jetstream/Filament
+      protected function fullName(): Attribute
+      {
+          return Attribute::make(
+              get: fn() => trim("{$this->attributes['name']} {$this->attributes['last_name']}"),
+          );
+      }
 
-    #[Override]
-    public function canAccessPanel(Panel $panel): bool
-    {
-      // Para desarrollo: dejás pasar a cualquier usuario logueado
-        return true;
-    }
-}
+      #[Override]
+      public function getFilamentAvatarUrl(): ?string
+      {
+          return $this->profile_photo_url;
+      }
 
-// Con el accessor fullName, todas las vistas Blade que hoy hacen {{ $user->name }} (nav de Jetstream, saludo, notificaciones, avatar por iniciales, etc.) siguen funcionando sin tocarlas.
+      #[Override]
+      public function canAccessPanel(Panel $panel): bool
+      {
+        // Para desarrollo: dejás pasar a cualquier usuario logueado
+          return true;
+      }
+  }
 
-//Modelo Cliente
-class Cliente extends Model 
-{ 
-  public function user() { return $this->belongsTo(User::class); } 
-}
+  // Con el accessor fullName, todas las vistas Blade que hoy hacen {{ $user->name }} (nav de Jetstream, saludo, notificaciones, avatar por iniciales, etc.) siguen funcionando sin tocarlas.
 
-//Modelo Empleado
-class Empleado extends Model 
-{ 
-  public function user() { return $this->belongsTo(User::class); } 
-}
-```
+  //Modelo Cliente
+  class Cliente extends Model 
+  { 
+    public function user() { return $this->belongsTo(User::class); } 
+  }
 
-Migrar la base de datos
-```php
-php artisan migrate
-```
+  //Modelo Empleado
+  class Empleado extends Model 
+  { 
+    public function user() { return $this->belongsTo(User::class); } 
+  }
+  ```
 
-Si ingresamos a la app en la vista welcome aparece "login" y "Register"
-Luego remplasaremos la codificacion de esta vista para lograr nuestra vista inicial "home"
+   3) Migrar la base de datos
+  ```php
+  php artisan migrate
+  ```
 
-Creamos un usuario para filament
-```php
-php artisan make:filament-user
-```
+  Si ingresamos a la app en la vista welcome aparece "login" y "Register"
+  Luego remplasaremos la codificacion de esta vista para lograr nuestra vista inicial "home"
 
-- Tenemos que generar las vistas
-```php
-  php artisan make:filament-resource NombreModelo --generate
-```
+  Creamos un usuario para filament
+  ```php
+  php artisan make:filament-user
+  ```
 
-Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
-- Aclaracion "dashboard" es el nombre del panel que le indicamos al momento de identificar el panel inicial.
+  Tenemos que generar las vistas
+  ```php
+    php artisan make:filament-resource NombreModelo --generate
+  ```
 
-- **IMPORTANTE**: Cuando indiquemos el nombre del panel *NO pongamos "dashboard"* por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta "/dashboard". Filament también y intenta usarla con el mismo nombre.
+  Ahora veremos en la siguiente url el login de filament URL:"http://localhost:8000/dashboard/login" 
+  - Aclaracion "dashboard" es el nombre del panel que le indicamos al momento de identificar el panel inicial.
 
-Esplicado lo anterior, si indicamos el nombre del panel como "dashboard", al ingresar nos da un error que indica que la ruta no esta definida, para esto devemos realizar algunos cambios.
+  - **IMPORTANTE**: Cuando indiquemos el nombre del panel *NO pongamos "dashboard"* por que dara conflicto con Jetsteam, esto ocurre porque Jetstream ya registra una ruta "/dashboard". Filament también y intenta usarla con el mismo nombre.
 
-- Cambiar el path del panel en DashboardPanelProvider.php 
-```php
-// app/Providers/Filament/DashboardPanelProvider.php
+  Esplicado lo anterior, si indicamos el nombre del panel como "dashboard", al ingresar nos da un error que indica que la ruta no esta definida, para esto devemos realizar algunos cambios.
 
-public function panel(Panel $panel): Panel
-{
-    return $panel
-        ->default()
-        ->id('dashboard')
-        ->path('admin')  // <-- cambiar 'dashboard' por 'admin'
-        ->login() // <-- cuando terminemos de configurar el panel admin para los administradores eliminamos esta linea para que Jetstream realice esta funcion.
-}
-```
+  - Cambiar el path del panel en DashboardPanelProvider.php 
+  ```php
+  // app/Providers/Filament/DashboardPanelProvider.php
+
+  public function panel(Panel $panel): Panel
+  {
+      return $panel
+          ->default()
+          ->id('dashboard')
+          ->path('admin')  // <-- cambiar 'dashboard' por 'admin'
+          ->login() // <-- cuando terminemos de configurar el panel admin para los administradores eliminamos esta linea para que Jetstream realice esta funcion.
+  }
+  ```
 
 # Roles y Permisos
 - Para poder configurar nuestro login unico con Jetstream y probar que el mismo redirija a las vistas correctas tanto la parte "front" Clientes/Visitantes y nuestra parte "backend" Super Admin y empleados, necesitamos los roles.
 - Instalaremos el plugin Shield de filament, este pluging se basa en Spatie-Permission, al 2026 estamos utilizando la V3 con laravel V12 y Filament V3.
 - Aclarada las versiones que utilizamos, seguiremos los pasos que indica la pagina, pero dejeare una guia con tips.
-  Guia de instalacion: 
+  
+  - Guia de instalacion: 
   ```php 
   1- composer require bezhansalleh/filament-shield
 
@@ -151,7 +153,7 @@ public function panel(Panel $panel): Panel
   4- php artisan migrate
   ```
 
-  5- Añadir el HasRoles para su modelo de proveedor de autenticación:
+  - Añadir el HasRoles para su modelo de proveedor de autenticación:
   ```php 
   use Spatie\Permission\Traits\HasRoles;
 
@@ -168,6 +170,101 @@ public function panel(Panel $panel): Panel
   7- php artisan shield:generate --all //este comando lo podemos utilizar mas adelante a medida que lo vallamos necesitando
 
   8- php artisan shield:super-admin //Si no nos creeo el super_admin en el paso anterior
+  ```
+
+  - Registro de empleados vía Filament
+  Filament no sabe nada de esto por defecto: tenés que hookear la creación. Lo más limpio es sobreescribir el método de creación en la página 
+  
+  CreateEmpleado:
+  ```php
+    class CreateEmployee extends CreateRecord
+    {
+      protected static string $resource = EmployeeResource::class;
+
+      protected function handleRecordCreation(array $data): Model
+      {
+          return DB::transaction(function () use ($data) {
+              $user = User::create([
+                  'name' => $data['name'],
+                  'last_name' => $data['last_name'],
+                  'email' => $data['email'],
+                  'password' => $data['password'], // ya viene hasheado por dehydrateStateUsing
+              ]);
+
+              $user->syncRoles($data['roles']);
+
+              return $user->employee()->create([
+                  'type_document' => $data['type_document'],
+                  'number_document' => $data['number_document'],
+                  'phone' => $data['phone'] ?? null,
+                  'birthdate' => $data['birthdate'] ?? null,
+                  'position' => $data['position'] ?? null,
+                  'date_hiring' => $data['date_hiring'] ?? null,
+                  'salary' => $data['salary'] ?? null,
+                  'active' => $data['active'] ?? true,
+              ]);
+          });
+      }
+    }
+  ```
+  - Y en el EmpleadoResource::form() agregás los campos email y password (con Hidden/dehydrated(false) para que no intente guardarlos directo en la tabla empleados).
+  ```php
+    public static function form(Form $form): Form
+    {
+      return $form
+      ->schema([
+          Forms\Components\Section::make('Dstos del Usuario')
+              ->schema([
+                  Forms\Components\TextInput::make('name')
+                      ->required()
+                      ->maxLength(255),
+                  Forms\Components\TextInput::make('last_name')
+                      ->required()
+                      ->maxLength(255),
+                  Forms\Components\TextInput::make('email')
+                      ->email()
+                      ->required()
+                      ->unique(
+                          table: 'users',
+                          column: 'email',
+                          ignoreRecord: true,
+                          // como el record es Employee, hay que ignorar por user_id
+                          modifyRuleUsing: fn(Forms\Get $get, $record, $rule) =>
+                          $record ? $rule->ignore($record->user_id, 'id') : $rule
+                      ),
+                  Forms\Components\TextInput::make('password')
+                      ->password()
+                      ->revealable()
+                      ->hiddenOn('edit')
+                      ->required(fn(string $context) => $context === 'create')
+                      ->dehydrated(fn($state) => filled($state))
+                      ->dehydrateStateUsing(fn($state) => Hash::make($state))
+                      ->maxLength(255),
+                  Forms\Components\Select::make('roles')
+                      ->label('Rol')
+                      ->multiple()
+                      ->options(Role::pluck('name', 'name'))
+                      ->preload()
+                      ->required(),
+
+              ])->columns(2),
+
+           Forms\Components\Section::make('Datos Empleado')
+               ->schema([
+                   Forms\Components\Select::make('type_document')
+                       ->options([
+                           'DNI' => 'DNI',
+                          'CI' => 'CI',
+                           'PASSPORT' => 'Pasaporte',
+                       ])
+                       ->required(),
+                   Forms\Components\TextInput::make('number_document')
+                       ->maxLength(20)
+                       ->required(),
+                  //Mas datos necesarios
+               ])->columns(2),
+       ]);
+    }
   ```
 
 # Jetstream como unico login
@@ -321,42 +418,7 @@ Con esto nuestros usuarios se redigiran segun el rol que tengan a las vistas cor
         }
     }
   ```
-  1) Registro de empleados vía Filament
-- Filament no sabe nada de esto por defecto: tenés que hookear la creación. Lo más limpio es sobreescribir el método de creación en la página CreateEmpleado:
-```php
-  class CreateEmpleado extends CreateRecord
-  {
-      protected static string $resource = EmpleadoResource::class;
-
-      protected function handleRecordCreation(array $data): Model
-      {
-          return DB::transaction(function () use ($data) {
-              $user = User::create([
-                  'email' => $data['email'],
-                  'password' => Hash::make($data['password']),
-              ]);
-
-              return $user->empleado()->create([
-                  'nombre' => $data['nombre'],
-                  // resto de campos propios de empleado
-              ]);
-          });
-      }
-  }
-```
-- Y en el EmpleadoResource::form() agregás los campos email y password (con Hidden/dehydrated(false) para que no intente guardarlos directo en la tabla empleados).
-```php
-return $form
-    ->schema([
-        Forms\Components\TextInput::make('name')
-                        ->required()
-                        ->maxLength(255),
-        Forms\Components\TextInput::make('email')
-                        ->email()
-                        ->required()
-                        ->maxLength(255),
-    ])
-```
+ 
 
 # Refactorizacion de vistas para "Visitantes/Clientes"
 - Comenzamos a limpiar nuestro codigo de vistas y componentes que no son necesarias como:
